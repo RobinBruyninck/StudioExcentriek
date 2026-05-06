@@ -1,6 +1,44 @@
+"use client"
+
+import { type FormEvent, useState } from "react"
 import Link from "next/link"
 
 export default function ContactPage() {
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle")
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    const form = event.currentTarget
+    const formData = new FormData(form)
+    const body = new URLSearchParams()
+
+    formData.forEach((value, key) => {
+      if (typeof value === "string") {
+        body.append(key, value)
+      }
+    })
+
+    setStatus("sending")
+
+    try {
+      const response = await fetch("/__forms.html", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: body.toString(),
+      })
+
+      if (!response.ok) {
+        throw new Error("Form submission failed")
+      }
+
+      form.reset()
+      setStatus("sent")
+    } catch {
+      setStatus("error")
+    }
+  }
+
   return (
     <main
       className="relative min-h-[100dvh] overflow-x-hidden bg-[#0d0d0d] px-5 pb-24 pt-8 text-[#f2f2ee] md:px-10 md:pb-28 md:pt-10"
@@ -33,9 +71,7 @@ export default function ContactPage() {
             <form
               name="contact"
               method="POST"
-              data-netlify="true"
-              netlify-honeypot="bot-field"
-              action="/contact"
+              onSubmit={handleSubmit}
               className="w-full max-w-[760px]"
             >
               <input type="hidden" name="form-name" value="contact" />
@@ -95,10 +131,23 @@ export default function ContactPage() {
 
               <button
                 type="submit"
+                disabled={status === "sending"}
                 className="mt-8 h-11 w-full border border-[#f2f2ee] bg-[#f2f2ee] px-8 text-[12px] font-semibold uppercase tracking-[0.06em] text-[#0d0d0d] transition hover:bg-transparent hover:text-[#f2f2ee] sm:w-auto"
               >
-                EMAIL ME
+                {status === "sending" ? "SENDING..." : "EMAIL ME"}
               </button>
+
+              {status === "sent" ? (
+                <p className="mt-4 text-[12px] uppercase tracking-[0.05em] text-[#f2f2ee]/75">
+                  Message sent.
+                </p>
+              ) : null}
+
+              {status === "error" ? (
+                <p className="mt-4 text-[12px] uppercase tracking-[0.05em] text-[#f2f2ee]/75">
+                  Message could not be sent. Please try again.
+                </p>
+              ) : null}
             </form>
           </div>
         </div>
